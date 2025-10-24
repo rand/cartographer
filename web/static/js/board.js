@@ -39,6 +39,13 @@ const API = {
 		return this.fetch(`/api/boards/${boardId}`);
 	},
 
+	async createBoard(board) {
+		return this.fetch('/api/boards', {
+			method: 'POST',
+			body: JSON.stringify(board)
+		});
+	},
+
 	async getTasks(boardId) {
 		return this.fetch(`/api/tasks?board_id=${boardId}`);
 	},
@@ -156,9 +163,11 @@ class WebSocketManager {
 
 // Kanban Board Manager
 class KanbanBoard {
-	constructor(boardId) {
+	constructor(boardId, projectId = null) {
 		this.boardId = boardId;
+		this.projectId = projectId;
 		this.board = null;
+		this.boards = [];
 		this.tasks = [];
 		this.columns = [];
 		this.draggedCard = null;
@@ -211,9 +220,18 @@ class KanbanBoard {
 			this.tasks = await API.getTasks(this.boardId);
 			this.columns = this.board.columns || [];
 
+			// Get project ID from board
+			this.projectId = this.board.project_id;
+
+			// Load all boards for this project
+			this.boards = await API.getBoards(this.projectId);
+
 			// Update header
 			document.getElementById('boardTitle').textContent = this.board.name;
 			document.getElementById('boardDescription').textContent = this.board.description || '';
+
+			// Render board selector
+			this.renderBoardSelector();
 
 			// Render board
 			this.render();
@@ -223,6 +241,146 @@ class KanbanBoard {
 		} catch (error) {
 			console.error('Failed to load board:', error);
 			this.showError('Failed to load board');
+		}
+	}
+
+	renderBoardSelector() {
+		const boardSelectorList = document.getElementById('boardSelectorList');
+		if (!boardSelectorList) return;
+
+		boardSelectorList.innerHTML = this.boards.map(board => {
+			const isActive = board.id === this.boardId;
+			return `
+				<button class="board-selector-item ${isActive ? 'active' : ''}" data-board-id="${board.id}">
+					<div class="board-selector-item-title">${this.escapeHtml(board.name)}</div>
+					${board.description ? `<div class="board-selector-item-desc">${this.escapeHtml(board.description)}</div>` : ''}
+				</button>
+			`;
+		}).join('');
+
+		// Add click handlers for board selection
+		boardSelectorList.querySelectorAll('.board-selector-item').forEach(item => {
+			item.addEventListener('click', (e) => {
+				const boardId = e.currentTarget.dataset.boardId;
+				if (boardId !== this.boardId) {
+					this.switchBoard(boardId);
+				}
+				this.closeBoardSelector();
+			});
+		});
+	}
+
+	async switchBoard(boardId) {
+		try {
+			// Update URL
+			const url = new URL(window.location);
+			url.searchParams.set('id', boardId);
+			window.history.pushState({}, '', url);
+
+			// Update board ID
+			this.boardId = boardId;
+
+			// Reload board data
+			this.board = await API.getBoard(this.boardId);
+			this.tasks = await API.getTasks(this.boardId);
+			this.columns = this.board.columns || [];
+
+			// Update UI
+			document.getElementById('boardTitle').textContent = this.board.name;
+			document.getElementById('boardDescription').textContent = this.board.description || '';
+
+			// Re-render
+			this.renderBoardSelector();
+			this.render();
+		} catch (error) {
+			console.error('Failed to switch board:', error);
+			this.showError('Failed to switch board');
+		}
+	}
+
+	toggleBoardSelector() {
+		const dropdown = document.getElementById('boardSelectorDropdown');
+		const isVisible = dropdown.style.display !== 'none';
+		dropdown.style.display = isVisible ? 'none' : 'block';
+	}
+
+	closeBoardSelector() {
+		const dropdown = document.getElementById('boardSelectorDropdown');
+		dropdown.style.display = 'none';
+	}
+
+	showCreateBoardModal() {
+		const modal = document.getElementById('taskModal');
+		const modalTitle = document.getElementById('modalTitle');
+		const modalBody = document.getElementById('modalBody');
+
+		modalTitle.textContent = 'Create New Board';
+		modalBody.innerHTML = `
+			<form id="createBoardForm" style="display: flex; flex-direction: column; gap: var(--space-3);">
+				<div>
+					<label for="boardName" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Board Name *</label>
+					<input type="text" id="boardName" required
+						style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+				</div>
+				<div>
+					<label for="boardDescription" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Description</label>
+					<textarea id="boardDescription" rows="3"
+						style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base); resize: vertical;"></textarea>
+				</div>
+				<div style="display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle);">
+					<button type="button" class="btn btn-secondary" id="cancelBoardBtn">Cancel</button>
+					<button type="submit" class="btn btn-primary">Create Board</button>
+				</div>
+			</form>
+		`;
+
+		modal.style.display = 'flex';
+
+		// Handle form submission
+		document.getElementById('createBoardForm').addEventListener('submit', async (e) => {
+			e.preventDefault();
+			await this.createBoard();
+		});
+
+		// Handle cancel
+		document.getElementById('cancelBoardBtn').addEventListener('click', () => {
+			modal.style.display = 'none';
+		});
+
+		// Close modal overlay
+		document.getElementById('modalOverlay').addEventListener('click', () => {
+			modal.style.display = 'none';
+		});
+	}
+
+	async createBoard() {
+		const name = document.getElementById('boardName').value;
+		const description = document.getElementById('boardDescription').value;
+
+		try {
+			const newBoard = await API.createBoard({
+				project_id: this.projectId,
+				name,
+				description,
+				columns: [
+					{ id: 'todo', name: 'To Do', order: 0 },
+					{ id: 'inprogress', name: 'In Progress', order: 1 },
+					{ id: 'done', name: 'Done', order: 2 }
+				]
+			});
+
+			// Reload boards list
+			this.boards = await API.getBoards(this.projectId);
+			this.renderBoardSelector();
+
+			// Switch to new board
+			await this.switchBoard(newBoard.id);
+
+			// Close modal
+			document.getElementById('taskModal').style.display = 'none';
+		} catch (error) {
+			console.error('Failed to create board:', error);
+			this.showError('Failed to create board');
 		}
 	}
 
@@ -444,6 +602,28 @@ class KanbanBoard {
 	}
 
 	setupEventListeners() {
+		// Board selector
+		const boardSelectorBtn = document.getElementById('boardSelectorBtn');
+		const createBoardBtn = document.getElementById('createBoardBtn');
+
+		boardSelectorBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.toggleBoardSelector();
+		});
+
+		createBoardBtn.addEventListener('click', () => {
+			this.closeBoardSelector();
+			this.showCreateBoardModal();
+		});
+
+		// Close dropdown when clicking outside
+		document.addEventListener('click', (e) => {
+			const boardSelector = document.getElementById('boardSelector');
+			if (!boardSelector.contains(e.target)) {
+				this.closeBoardSelector();
+			}
+		});
+
 		// Search input
 		const searchInput = document.getElementById('searchInput');
 		const clearSearchBtn = document.getElementById('clearSearchBtn');

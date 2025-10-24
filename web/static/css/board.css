@@ -28,6 +28,102 @@
 	align-items: center;
 }
 
+/* Board Selector */
+.board-selector {
+	position: relative;
+}
+
+.board-selector-btn {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	background: transparent;
+	border: none;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.board-selector-btn:hover {
+	background: var(--color-bg-secondary);
+}
+
+.board-selector-btn h2 {
+	color: var(--color-text-primary);
+}
+
+.board-selector-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	margin-top: var(--space-1);
+	min-width: 320px;
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-xl);
+	z-index: 100;
+	max-height: 400px;
+	display: flex;
+	flex-direction: column;
+}
+
+.board-selector-list {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--space-2);
+}
+
+.board-selector-item {
+	display: flex;
+	flex-direction: column;
+	padding: var(--space-2);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+	text-align: left;
+	width: 100%;
+	margin-bottom: var(--space-1);
+}
+
+.board-selector-item:hover {
+	background: var(--color-bg-secondary);
+	border-color: var(--color-border-default);
+}
+
+.board-selector-item.active {
+	background: var(--color-bg-secondary);
+	border-color: var(--color-primary);
+}
+
+.board-selector-item-title {
+	font-size: var(--font-size-base);
+	font-weight: 600;
+	color: var(--color-text-primary);
+	margin-bottom: 2px;
+}
+
+.board-selector-item-desc {
+	font-size: var(--font-size-sm);
+	color: var(--color-text-secondary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.board-selector-footer {
+	padding: var(--space-2);
+	border-top: 1px solid var(--color-border-subtle);
+}
+
+.btn-block {
+	width: 100%;
+	justify-content: center;
+}
+
 /* Board Filters */
 .board-filters {
 	display: flex;
