@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rand/cartographer/internal/api/rest"
+	"github.com/rand/cartographer/internal/api/websocket"
 	"github.com/rand/cartographer/internal/storage"
 )
 
@@ -22,6 +24,7 @@ const (
 // App holds application state
 type App struct {
 	db     *storage.DB
+	wsHub  *websocket.Hub
 	logger *log.Logger
 }
 
@@ -49,9 +52,21 @@ func main() {
 	defer db.Close()
 	logger.Printf("Database initialized at %s", db.Path())
 
+	// Initialize repositories
+	logger.Println("Initializing repositories...")
+	projectRepo := storage.NewProjectRepository(db)
+	boardRepo := storage.NewBoardRepository(db)
+	taskRepo := storage.NewTaskRepository(db)
+
+	// Initialize WebSocket hub
+	logger.Println("Starting WebSocket hub...")
+	wsHub := websocket.NewHub(logger)
+	go wsHub.Run()
+
 	// Create application state
 	app := &App{
 		db:     db,
+		wsHub:  wsHub,
 		logger: logger,
 	}
 
@@ -61,6 +76,14 @@ func main() {
 	// Health check endpoint
 	mux.HandleFunc("/health", app.handleHealth)
 
+	// WebSocket endpoint
+	wsHandler := websocket.NewHandler(wsHub, logger)
+	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
+
+	// REST API endpoints
+	apiHandler := rest.NewAPIHandler(projectRepo, boardRepo, taskRepo, wsHub, logger)
+	apiHandler.Register(mux)
+
 	// Static files - serve from web/static
 	fs := http.FileServer(http.Dir("web/static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
@@ -69,9 +92,13 @@ func main() {
 	mux.HandleFunc("/", app.handleIndex)
 
 	addr := fmt.Sprintf("%s:%s", defaultHost, port)
+
+	// Wrap with middleware (CORS and logging)
+	handler := rest.LoggingMiddleware(logger)(rest.CORSMiddleware(mux))
+
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

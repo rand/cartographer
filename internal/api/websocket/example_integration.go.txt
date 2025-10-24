@@ -1,0 +1,291 @@
+// Example integration with cmd/cartographer/main.go
+// This file shows how to integrate WebSocket support into the main application
+// DO NOT import this file - it's for reference only
+
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/rand/cartographer/internal/api/websocket"
+	"github.com/rand/cartographer/internal/storage"
+)
+
+const (
+	defaultPort    = "8080"
+	defaultHost    = "127.0.0.1"
+	defaultDataDir = "./data"
+)
+
+// App holds application state
+type App struct {
+	db     *storage.DB
+	logger *log.Logger
+	wsHub  *websocket.Hub // Add WebSocket hub
+}
+
+func main() {
+	// Setup logger
+	logger := log.New(os.Stdout, "[cartographer] ", log.LstdFlags|log.Lshortfile)
+
+	// Get configuration from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = defaultPort
+	}
+
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = defaultDataDir
+	}
+
+	// Initialize database
+	logger.Println("Initializing database...")
+	db, err := storage.New(dataDir)
+	if err != nil {
+		logger.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+	logger.Printf("Database initialized at %s", db.Path())
+
+	// Initialize WebSocket hub
+	wsHub := websocket.NewHub(logger)
+	go wsHub.Run()
+	defer wsHub.Shutdown()
+
+	// Create application state
+	app := &App{
+		db:     db,
+		logger: logger,
+		wsHub:  wsHub, // Store hub in app
+	}
+
+	// Create HTTP server
+	mux := http.NewServeMux()
+
+	// Health check endpoint
+	mux.HandleFunc("/health", app.handleHealth)
+
+	// WebSocket endpoint
+	wsHandler := websocket.NewHandler(wsHub, logger)
+	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
+
+	// API endpoints (REST)
+	mux.HandleFunc("/api/tasks", app.handleTasks)
+	mux.HandleFunc("/api/projects", app.handleProjects)
+	mux.HandleFunc("/api/boards", app.handleBoards)
+
+	// Static files
+	fs := http.FileServer(http.Dir("web/static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	// Main index page
+	mux.HandleFunc("/", app.handleIndex)
+
+	addr := fmt.Sprintf("%s:%s", defaultHost, port)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server
+	go func() {
+		logger.Printf("Starting Cartographer on http://%s", addr)
+		logger.Printf("Health check: http://%s/health", addr)
+		logger.Printf("WebSocket: ws://%s/ws", addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Println("Shutting down server...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	logger.Println("Server stopped")
+}
+
+// Example: Create task with WebSocket broadcast
+func (app *App) handleTasks(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		// Parse request body, create task in database
+		// ...
+
+		// Example task data
+		task := map[string]interface{}{
+			"id":      "task-123",
+			"title":   "New Task",
+			"status":  "todo",
+			"board_id": "board-456",
+		}
+
+		// Broadcast task creation to all connected WebSocket clients
+		err := app.wsHub.BroadcastTaskCreated("task-123", "board-456", task)
+		if err != nil {
+			app.logger.Printf("Failed to broadcast task creation: %v", err)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"status":"created"}`))
+
+	case http.MethodPut:
+		// Parse request body, update task in database
+		// ...
+
+		// Example update
+		changes := map[string]interface{}{
+			"status": "in_progress",
+		}
+
+		task := map[string]interface{}{
+			"id":      "task-123",
+			"title":   "New Task",
+			"status":  "in_progress",
+			"board_id": "board-456",
+		}
+
+		// Broadcast task update
+		err := app.wsHub.BroadcastTaskUpdated("task-123", "board-456", changes, task)
+		if err != nil {
+			app.logger.Printf("Failed to broadcast task update: %v", err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"updated"}`))
+
+	case http.MethodDelete:
+		// Delete task from database
+		// ...
+
+		// Broadcast task deletion
+		err := app.wsHub.BroadcastTaskDeleted("task-123", "board-456")
+		if err != nil {
+			app.logger.Printf("Failed to broadcast task deletion: %v", err)
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// Example: Update project with WebSocket broadcast
+func (app *App) handleProjects(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		// Create project...
+		project := map[string]interface{}{
+			"id":   "proj-123",
+			"name": "New Project",
+		}
+
+		err := app.wsHub.BroadcastProjectCreated("proj-123", project)
+		if err != nil {
+			app.logger.Printf("Failed to broadcast project creation: %v", err)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+
+	case http.MethodPut:
+		// Update project...
+		changes := map[string]interface{}{
+			"name": "Updated Project",
+		}
+
+		project := map[string]interface{}{
+			"id":   "proj-123",
+			"name": "Updated Project",
+		}
+
+		err := app.wsHub.BroadcastProjectUpdated("proj-123", changes, project)
+		if err != nil {
+			app.logger.Printf("Failed to broadcast project update: %v", err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// Example: Update board with WebSocket broadcast
+func (app *App) handleBoards(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPut {
+		// Update board...
+		changes := map[string]interface{}{
+			"columns": []string{"todo", "in_progress", "done"},
+		}
+
+		board := map[string]interface{}{
+			"id":         "board-456",
+			"project_id": "proj-123",
+			"name":       "Development Board",
+		}
+
+		err := app.wsHub.BroadcastBoardUpdated("board-456", "proj-123", changes, board)
+		if err != nil {
+			app.logger.Printf("Failed to broadcast board update: %v", err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (app *App) handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	dbStatus := "ok"
+	if err := app.db.Ping(); err != nil {
+		dbStatus = "error"
+		app.logger.Printf("Database ping failed: %v", err)
+	}
+
+	// Include WebSocket client count
+	wsClients := app.wsHub.ClientCount()
+
+	status := "ok"
+	statusCode := http.StatusOK
+
+	if dbStatus != "ok" {
+		status = "degraded"
+		statusCode = http.StatusServiceUnavailable
+	}
+
+	w.WriteHeader(statusCode)
+	fmt.Fprintf(w, `{"status":"%s","service":"cartographer","database":"%s","websocket_clients":%d,"timestamp":"%s"}`,
+		status, dbStatus, wsClients, time.Now().Format(time.RFC3339))
+}
+
+func (app *App) handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	http.ServeFile(w, r, "web/static/index.html")
+}
