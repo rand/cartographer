@@ -326,7 +326,96 @@ class BeadsViewer {
         }
 
         modalBody.innerHTML = detailsHTML;
+
+        // Add action buttons to footer
+        const modalFooter = document.getElementById('modalFooter');
+        modalFooter.innerHTML = `
+            <button class="btn btn-primary" id="createTaskBtn" data-issue-id="${issue.id}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                    <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                Create Task from Issue
+            </button>
+        `;
+
+        // Attach create task handler
+        document.getElementById('createTaskBtn').addEventListener('click', () => {
+            this.createTaskFromIssue(issue);
+        });
+
         this.openModal();
+    }
+
+    async createTaskFromIssue(issue) {
+        try {
+            // First, get list of available boards
+            const boardsResponse = await fetch('/api/boards');
+            if (!boardsResponse.ok) {
+                throw new Error('Failed to fetch boards');
+            }
+            const boards = await boardsResponse.json();
+
+            if (!boards || boards.length === 0) {
+                alert('No boards available. Please create a project and board first.');
+                return;
+            }
+
+            // For now, use the first available board
+            // In a future enhancement, we could show a board selector
+            const board = boards[0];
+
+            // Map beads priority to task priority
+            const priorityMap = {
+                0: 'urgent',
+                1: 'high',
+                2: 'medium',
+                3: 'low'
+            };
+
+            // Create task with linked beads issue
+            const taskData = {
+                board_id: board.id,
+                title: issue.title,
+                description: issue.description || `Linked from beads issue ${issue.id}`,
+                status: issue.status === 'closed' ? 'Done' : (issue.status === 'in_progress' ? 'In Progress' : 'To Do'),
+                priority: priorityMap[issue.priority] || 'medium',
+                labels: issue.labels || [],
+                linked_items: [
+                    {
+                        type: 'bead',
+                        id: issue.id
+                    }
+                ]
+            };
+
+            const response = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to create task: ${response.statusText}`);
+            }
+
+            const createdTask = await response.json();
+
+            // Show success message
+            const modalFooter = document.getElementById('modalFooter');
+            modalFooter.innerHTML = `
+                <div class="success-message" style="flex: 1; color: var(--color-success); font-size: var(--font-size-sm);">
+                    ✓ Task created successfully on board "${this.escapeHtml(board.name)}"
+                </div>
+                <a href="/static/board.html?id=${board.id}" class="btn btn-primary" target="_blank">
+                    View Board
+                </a>
+            `;
+        } catch (error) {
+            console.error('Error creating task from issue:', error);
+            alert('Failed to create task. Error: ' + error.message);
+        }
     }
 
     openModal() {

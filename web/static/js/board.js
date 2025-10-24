@@ -490,6 +490,15 @@ class KanbanBoard {
 						`).join('')}
 					</div>
 				` : ''}
+				${task.linked_items && task.linked_items.some(item => item.type === 'bead') ? `
+					<div class="card-beads-link">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+							<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+							<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+						</svg>
+						Linked to ${task.linked_items.filter(item => item.type === 'bead').map(item => item.id).join(', ')}
+					</div>
+				` : ''}
 				<div class="card-meta">
 					<div class="card-meta-item ${priorityClass}">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
