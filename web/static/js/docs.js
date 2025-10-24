@@ -408,7 +408,11 @@ class MarkdownEditor {
 		return this.documents.filter(doc => {
 			const titleMatch = (doc.title || '').toLowerCase().includes(this.searchFilter);
 			const pathMatch = (doc.path || '').toLowerCase().includes(this.searchFilter);
-			return titleMatch || pathMatch;
+			const contentMatch = (doc.content || '').toLowerCase().includes(this.searchFilter);
+			const tagsMatch = (doc.tags || []).some(tag =>
+				tag.toLowerCase().includes(this.searchFilter)
+			);
+			return titleMatch || pathMatch || contentMatch || tagsMatch;
 		});
 	}
 
@@ -485,6 +489,10 @@ class MarkdownEditor {
 				const updatedDate = new Date(doc.updated_at || doc.created_at);
 				const timeAgo = this.getTimeAgo(updatedDate);
 
+				// Get search snippet if searching content
+				const snippet = this.searchFilter ? this.getSearchSnippet(doc) : '';
+				const snippetHtml = snippet ? `<div class="file-browser-item-snippet">${snippet}</div>` : '';
+
 				return `
 					<div class="file-browser-item ${isActive ? 'active' : ''}" data-doc-id="${doc.id}">
 						<svg class="file-browser-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -497,11 +505,51 @@ class MarkdownEditor {
 						<div class="file-browser-item-content">
 							<div class="file-browser-item-name">${doc.title || 'Untitled'}</div>
 							<div class="file-browser-item-meta">${timeAgo}</div>
+							${snippetHtml}
 						</div>
 					</div>
 				`;
 			})
 			.join('');
+	}
+
+	getSearchSnippet(doc) {
+		const content = doc.content || '';
+		const contentLower = content.toLowerCase();
+		const filterLower = this.searchFilter.toLowerCase();
+
+		// Check if content contains the search term
+		const index = contentLower.indexOf(filterLower);
+		if (index === -1) {
+			return ''; // No match in content
+		}
+
+		// Extract snippet around the match
+		const snippetRadius = 60; // Characters before/after match
+		const start = Math.max(0, index - snippetRadius);
+		const end = Math.min(content.length, index + filterLower.length + snippetRadius);
+
+		let snippet = content.substring(start, end);
+
+		// Add ellipsis if truncated
+		if (start > 0) snippet = '...' + snippet;
+		if (end < content.length) snippet = snippet + '...';
+
+		// Highlight the search term
+		const regex = new RegExp(`(${this.escapeRegex(this.searchFilter)})`, 'gi');
+		snippet = this.escapeHtml(snippet).replace(regex, '<mark>$1</mark>');
+
+		return snippet;
+	}
+
+	escapeHtml(text) {
+		const div = document.createElement('div');
+		div.textContent = text;
+		return div.innerHTML;
+	}
+
+	escapeRegex(text) {
+		return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
 	getTimeAgo(date) {

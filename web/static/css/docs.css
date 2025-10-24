@@ -179,6 +179,22 @@
 	margin-top: var(--space-1);
 }
 
+.file-browser-item-snippet {
+	font-size: var(--font-size-xs);
+	color: var(--color-text-secondary);
+	margin-top: var(--space-1);
+	line-height: var(--line-height-tight);
+	word-break: break-word;
+}
+
+.file-browser-item-snippet mark {
+	background: var(--color-primary);
+	color: white;
+	padding: 1px 3px;
+	border-radius: var(--radius-sm);
+	font-weight: 600;
+}
+
 /* Document Editor Area */
 .docs-content {
 	display: flex;
