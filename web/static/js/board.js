@@ -534,47 +534,250 @@ class KanbanBoard {
 		const modalTitle = document.getElementById('modalTitle');
 		const modalBody = document.getElementById('modalBody');
 
-		modalTitle.textContent = 'Task Details';
-		modalBody.innerHTML = `
-			<div style="display: flex; flex-direction: column; gap: var(--space-4);">
-				<div>
-					<div style="font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-bottom: var(--space-1);">ID: ${task.id}</div>
-					<h3 style="font-size: var(--font-size-xl); font-weight: 700;">${this.escapeHtml(task.title)}</h3>
-				</div>
-				${task.description ? `
-					<div>
-						<div style="font-weight: 600; margin-bottom: var(--space-1);">Description</div>
-						<div style="color: var(--color-text-secondary);">${this.escapeHtml(task.description)}</div>
+		const formatDate = (date) => {
+			if (!date) return 'N/A';
+			return new Date(date).toLocaleString();
+		};
+
+		const renderViewMode = () => {
+			modalTitle.textContent = 'Task Details';
+			modalBody.innerHTML = `
+				<div style="display: flex; flex-direction: column; gap: var(--space-4);">
+					<!-- Header with actions -->
+					<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
+						<div style="flex: 1;">
+							<div style="font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-bottom: var(--space-1);">#${task.id.substring(0, 8)}</div>
+							<h3 style="font-size: var(--font-size-2xl); font-weight: 700; line-height: 1.3;">${this.escapeHtml(task.title)}</h3>
+						</div>
+						<div style="display: flex; gap: var(--space-2);">
+							<button class="btn btn-secondary" id="editTaskBtn">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+								</svg>
+								Edit
+							</button>
+							<button class="btn btn-secondary" style="color: var(--color-error); border-color: var(--color-error);" id="deleteTaskBtn">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="3 6 5 6 21 6"></polyline>
+									<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+								</svg>
+								Delete
+							</button>
+						</div>
 					</div>
-				` : ''}
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-					<div>
-						<div style="font-weight: 600; margin-bottom: var(--space-1);">Status</div>
-						<div style="color: var(--color-text-secondary);">${task.status}</div>
-					</div>
-					<div>
-						<div style="font-weight: 600; margin-bottom: var(--space-1);">Priority</div>
-						<div class="priority-${task.priority || 'medium'}">${task.priority || 'medium'}</div>
-					</div>
-					${task.estimate ? `
+
+					<!-- Description -->
+					${task.description ? `
 						<div>
-							<div style="font-weight: 600; margin-bottom: var(--space-1);">Estimate</div>
-							<div style="color: var(--color-text-secondary);">${task.estimate} hours</div>
+							<div style="font-weight: 600; font-size: var(--font-size-sm); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-2);">Description</div>
+							<div style="color: var(--color-text-secondary); line-height: 1.6; white-space: pre-wrap;">${this.escapeHtml(task.description)}</div>
+						</div>
+					` : '<div style="color: var(--color-text-tertiary); font-style: italic;">No description</div>'}
+
+					<!-- Metadata Grid -->
+					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-3); padding: var(--space-3); background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
+						<div>
+							<div style="font-weight: 600; font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-1);">Status</div>
+							<div style="font-weight: 600; text-transform: capitalize;">${this.escapeHtml(task.status)}</div>
+						</div>
+						<div>
+							<div style="font-weight: 600; font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-1);">Priority</div>
+							<div class="priority-${task.priority || 'medium'}" style="font-weight: 600; text-transform: capitalize;">${task.priority || 'medium'}</div>
+						</div>
+						${task.estimate ? `
+							<div>
+								<div style="font-weight: 600; font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-1);">Estimate</div>
+								<div style="font-family: var(--font-mono); font-weight: 600;">${task.estimate}h</div>
+							</div>
+						` : ''}
+						${task.actual ? `
+							<div>
+								<div style="font-weight: 600; font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-1);">Actual</div>
+								<div style="font-family: var(--font-mono); font-weight: 600;">${task.actual}h</div>
+							</div>
+						` : ''}
+					</div>
+
+					<!-- Labels -->
+					${task.labels && task.labels.length > 0 ? `
+						<div>
+							<div style="font-weight: 600; font-size: var(--font-size-sm); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-2);">Labels</div>
+							<div style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+								${task.labels.map(label => `
+									<span style="padding: 4px var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); font-size: var(--font-size-sm); font-weight: 500;">
+										${this.escapeHtml(label)}
+									</span>
+								`).join('')}
+							</div>
 						</div>
 					` : ''}
-				</div>
-			</div>
-		`;
 
+					<!-- Timestamps -->
+					<div style="padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle); display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+						<div>
+							<div style="font-weight: 600; font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-1);">Created</div>
+							<div style="font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-secondary);">${formatDate(task.created_at)}</div>
+						</div>
+						<div>
+							<div style="font-weight: 600; font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); margin-bottom: var(--space-1);">Updated</div>
+							<div style="font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-text-secondary);">${formatDate(task.updated_at)}</div>
+						</div>
+					</div>
+				</div>
+			`;
+
+			// Edit button handler
+			document.getElementById('editTaskBtn').addEventListener('click', () => {
+				renderEditMode();
+			});
+
+			// Delete button handler
+			document.getElementById('deleteTaskBtn').addEventListener('click', async () => {
+				if (confirm(`Are you sure you want to delete "${task.title}"? This cannot be undone.`)) {
+					try {
+						await API.deleteTask(task.id);
+						modal.style.display = 'none';
+						// Task will be removed by WebSocket update
+					} catch (error) {
+						console.error('Failed to delete task:', error);
+						this.showError('Failed to delete task');
+					}
+				}
+			});
+		};
+
+		const renderEditMode = () => {
+			modalTitle.textContent = 'Edit Task';
+			modalBody.innerHTML = `
+				<form id="editTaskForm" style="display: flex; flex-direction: column; gap: var(--space-3);">
+					<div>
+						<label for="editTaskTitle" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Title *</label>
+						<input type="text" id="editTaskTitle" required value="${this.escapeHtml(task.title)}"
+							style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+					</div>
+					<div>
+						<label for="editTaskDescription" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Description</label>
+						<textarea id="editTaskDescription" rows="6"
+							style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base); resize: vertical;">${task.description || ''}</textarea>
+					</div>
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
+						<div>
+							<label for="editTaskStatus" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Status</label>
+							<select id="editTaskStatus"
+								style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+								${this.columns.map(col => `
+									<option value="${col.id}" ${task.status === col.id ? 'selected' : ''}>${col.name}</option>
+								`).join('')}
+							</select>
+						</div>
+						<div>
+							<label for="editTaskPriority" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Priority</label>
+							<select id="editTaskPriority"
+								style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+								<option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low</option>
+								<option value="medium" ${(task.priority === 'medium' || !task.priority) ? 'selected' : ''}>Medium</option>
+								<option value="high" ${task.priority === 'high' ? 'selected' : ''}>High</option>
+								<option value="urgent" ${task.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+							</select>
+						</div>
+					</div>
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
+						<div>
+							<label for="editTaskEstimate" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Estimate (hours)</label>
+							<input type="number" id="editTaskEstimate" min="0" step="0.5" value="${task.estimate || ''}"
+								style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+						</div>
+						<div>
+							<label for="editTaskActual" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Actual (hours)</label>
+							<input type="number" id="editTaskActual" min="0" step="0.5" value="${task.actual || ''}"
+								style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+						</div>
+					</div>
+					<div>
+						<label for="editTaskLabels" style="display: block; margin-bottom: var(--space-1); font-weight: 600;">Labels (comma-separated)</label>
+						<input type="text" id="editTaskLabels" value="${(task.labels || []).join(', ')}" placeholder="bug, feature, urgent"
+							style="width: 100%; padding: var(--space-2); background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);">
+					</div>
+					<div style="display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle);">
+						<button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+						<button type="submit" class="btn btn-primary">Save Changes</button>
+					</div>
+				</form>
+			`;
+
+			// Focus title input
+			setTimeout(() => document.getElementById('editTaskTitle').focus(), 100);
+
+			// Handle form submission
+			document.getElementById('editTaskForm').addEventListener('submit', async (e) => {
+				e.preventDefault();
+
+				const updatedTask = {
+					...task,
+					title: document.getElementById('editTaskTitle').value,
+					description: document.getElementById('editTaskDescription').value,
+					status: document.getElementById('editTaskStatus').value,
+					priority: document.getElementById('editTaskPriority').value,
+				};
+
+				const estimate = parseFloat(document.getElementById('editTaskEstimate').value);
+				if (estimate) {
+					updatedTask.estimate = estimate;
+				} else {
+					delete updatedTask.estimate;
+				}
+
+				const actual = parseFloat(document.getElementById('editTaskActual').value);
+				if (actual) {
+					updatedTask.actual = actual;
+				} else {
+					delete updatedTask.actual;
+				}
+
+				const labelsInput = document.getElementById('editTaskLabels').value.trim();
+				if (labelsInput) {
+					updatedTask.labels = labelsInput.split(',').map(l => l.trim()).filter(l => l);
+				} else {
+					updatedTask.labels = [];
+				}
+
+				try {
+					await API.updateTask(task.id, updatedTask);
+					// Update will be reflected by WebSocket
+					modal.style.display = 'none';
+				} catch (error) {
+					console.error('Failed to update task:', error);
+					this.showError('Failed to update task');
+				}
+			});
+
+			// Handle cancel
+			document.getElementById('cancelEditBtn').addEventListener('click', () => {
+				renderViewMode();
+			});
+		};
+
+		// Start in view mode
+		renderViewMode();
 		modal.style.display = 'flex';
 
-		document.getElementById('closeModalBtn').addEventListener('click', () => {
+		// Handle modal close
+		const closeHandler = () => {
 			modal.style.display = 'none';
-		});
+		};
 
-		document.getElementById('modalOverlay').addEventListener('click', () => {
-			modal.style.display = 'none';
-		});
+		document.getElementById('closeModalBtn').addEventListener('click', closeHandler);
+		document.getElementById('modalOverlay').addEventListener('click', closeHandler);
+
+		// Handle escape key
+		const escapeHandler = (e) => {
+			if (e.key === 'Escape') {
+				modal.style.display = 'none';
+				document.removeEventListener('keydown', escapeHandler);
+			}
+		};
+		document.addEventListener('keydown', escapeHandler);
 	}
 
 	escapeHtml(text) {
