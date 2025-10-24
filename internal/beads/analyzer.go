@@ -354,3 +354,76 @@ func (a *Analyzer) PrintDependencyGraph() string {
 
 	return output
 }
+
+// FilterCriteria defines criteria for filtering issues
+type FilterCriteria struct {
+	Status        *beads.Status
+	IssueType     *beads.IssueType
+	Priority      *int
+	Assignee      *string
+	Labels        []string
+	ExcludeClosed bool
+}
+
+// FilterIssues returns issues matching the given criteria
+func (a *Analyzer) FilterIssues(criteria FilterCriteria) []*beads.Issue {
+	var filtered []*beads.Issue
+
+	for _, issue := range a.issues {
+		// Apply filters
+		if criteria.Status != nil && issue.Status != *criteria.Status {
+			continue
+		}
+
+		if criteria.IssueType != nil && issue.IssueType != *criteria.IssueType {
+			continue
+		}
+
+		if criteria.Priority != nil && issue.Priority != *criteria.Priority {
+			continue
+		}
+
+		if criteria.Assignee != nil && issue.Assignee != *criteria.Assignee {
+			continue
+		}
+
+		if criteria.ExcludeClosed && issue.Status == beads.StatusClosed {
+			continue
+		}
+
+		// Label filter - must have all specified labels
+		if len(criteria.Labels) > 0 && issue.Labels != nil {
+			hasAllLabels := true
+			for _, requiredLabel := range criteria.Labels {
+				found := false
+				for _, issueLabel := range issue.Labels {
+					if issueLabel == requiredLabel {
+						found = true
+						break
+					}
+				}
+				if !found {
+					hasAllLabels = false
+					break
+				}
+			}
+			if !hasAllLabels {
+				continue
+			}
+		}
+
+		filtered = append(filtered, issue)
+	}
+
+	return filtered
+}
+
+// GetIssueByID returns a single issue by its ID
+func (a *Analyzer) GetIssueByID(issueID string) (*beads.Issue, bool) {
+	for _, issue := range a.issues {
+		if issue.ID == issueID {
+			return issue, true
+		}
+	}
+	return nil, false
+}

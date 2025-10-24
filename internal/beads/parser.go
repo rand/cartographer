@@ -166,17 +166,26 @@ func GetBeadsStatistics(issues []*beads.Issue) map[string]interface{} {
 	statusCounts := make(map[beads.Status]int)
 	typeCounts := make(map[beads.IssueType]int)
 	priorityCounts := make(map[int]int)
+	labelCounts := make(map[string]int)
 
 	for _, issue := range issues {
 		statusCounts[issue.Status]++
 		typeCounts[issue.IssueType]++
 		priorityCounts[issue.Priority]++
+
+		// Count labels
+		if issue.Labels != nil {
+			for _, label := range issue.Labels {
+				labelCounts[label]++
+			}
+		}
 	}
 
 	stats["total"] = len(issues)
 	stats["by_status"] = statusCounts
 	stats["by_type"] = typeCounts
 	stats["by_priority"] = priorityCounts
+	stats["by_label"] = labelCounts
 
 	return stats
 }
