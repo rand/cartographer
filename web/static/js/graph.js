@@ -204,6 +204,8 @@ class DependencyGraph {
             this.layoutHierarchical();
         } else if (this.layoutType === 'circular') {
             this.layoutCircular();
+        } else if (this.layoutType === 'force') {
+            this.layoutForceDirected();
         }
     }
 
@@ -269,6 +271,137 @@ class DependencyGraph {
             node.x = centerX + radius * Math.cos(angle);
             node.y = centerY + radius * Math.sin(angle);
         });
+    }
+
+    layoutForceDirected() {
+        const svgRect = this.svg.getBoundingClientRect();
+        const width = svgRect.width;
+        const height = svgRect.height;
+
+        // Initialize nodes at random positions if not already positioned
+        this.nodes.forEach(node => {
+            if (!node.x || !node.y || node.x === 0 || node.y === 0) {
+                node.x = Math.random() * width * 0.8 + width * 0.1;
+                node.y = Math.random() * height * 0.8 + height * 0.1;
+            }
+            node.vx = 0;
+            node.vy = 0;
+        });
+
+        // Build edge map for faster lookup
+        const edgeMap = new Map();
+        this.edges.forEach(edge => {
+            if (!edgeMap.has(edge.from)) edgeMap.set(edge.from, []);
+            if (!edgeMap.has(edge.to)) edgeMap.set(edge.to, []);
+            edgeMap.get(edge.from).push(edge.to);
+            edgeMap.get(edge.to).push(edge.from);
+        });
+
+        // Simulation parameters
+        const params = {
+            repulsionStrength: 5000,
+            attractionStrength: 0.01,
+            damping: 0.8,
+            centeringStrength: 0.01,
+            minDistance: 50,
+            iterations: 300,
+            iterationDelay: 10
+        };
+
+        let iteration = 0;
+
+        const simulate = () => {
+            if (iteration >= params.iterations) {
+                return;
+            }
+
+            // Apply repulsive forces between all nodes
+            for (let i = 0; i < this.nodes.length; i++) {
+                for (let j = i + 1; j < this.nodes.length; j++) {
+                    const node1 = this.nodes[i];
+                    const node2 = this.nodes[j];
+
+                    const dx = node2.x - node1.x;
+                    const dy = node2.y - node1.y;
+                    const distanceSquared = dx * dx + dy * dy;
+                    const distance = Math.sqrt(distanceSquared);
+
+                    if (distance < params.minDistance) {
+                        continue;
+                    }
+
+                    // Coulomb's law: F = k / d^2
+                    const force = params.repulsionStrength / distanceSquared;
+                    const fx = (dx / distance) * force;
+                    const fy = (dy / distance) * force;
+
+                    node1.vx -= fx;
+                    node1.vy -= fy;
+                    node2.vx += fx;
+                    node2.vy += fy;
+                }
+            }
+
+            // Apply attractive forces along edges
+            this.edges.forEach(edge => {
+                const node1 = this.nodes.find(n => n.id === edge.from);
+                const node2 = this.nodes.find(n => n.id === edge.to);
+
+                if (!node1 || !node2) return;
+
+                const dx = node2.x - node1.x;
+                const dy = node2.y - node1.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Hooke's law: F = k * d
+                const force = params.attractionStrength * distance;
+                const fx = (dx / distance) * force;
+                const fy = (dy / distance) * force;
+
+                node1.vx += fx;
+                node1.vy += fy;
+                node2.vx -= fx;
+                node2.vy -= fy;
+            });
+
+            // Apply centering force
+            const centerX = width / 2;
+            const centerY = height / 2;
+            this.nodes.forEach(node => {
+                const dx = centerX - node.x;
+                const dy = centerY - node.y;
+                node.vx += dx * params.centeringStrength;
+                node.vy += dy * params.centeringStrength;
+            });
+
+            // Update positions and apply damping
+            this.nodes.forEach(node => {
+                node.vx *= params.damping;
+                node.vy *= params.damping;
+
+                node.x += node.vx;
+                node.y += node.vy;
+
+                // Keep nodes within bounds
+                const margin = 50;
+                node.x = Math.max(margin, Math.min(width - margin, node.x));
+                node.y = Math.max(margin, Math.min(height - margin, node.y));
+            });
+
+            // Render current state
+            this.renderEdges();
+            this.renderNodes();
+
+            iteration++;
+
+            // Continue simulation
+            if (iteration < params.iterations) {
+                setTimeout(simulate, params.iterationDelay);
+            }
+        };
+
+        // Start simulation
+        simulate();
     }
 
     renderEdges() {
