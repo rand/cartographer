@@ -2,9 +2,188 @@
 
 .docs-main {
 	padding: 0;
+	display: grid;
+	grid-template-columns: 280px 1fr;
+	height: calc(100vh - 64px);
+	overflow: hidden;
+}
+
+/* File Browser Sidebar */
+.file-browser {
 	display: flex;
 	flex-direction: column;
-	height: calc(100vh - 64px);
+	background: var(--color-bg-secondary);
+	border-right: 1px solid var(--color-border-subtle);
+	overflow: hidden;
+}
+
+.file-browser.collapsed {
+	display: none;
+}
+
+.file-browser-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-3) var(--space-4);
+	border-bottom: 1px solid var(--color-border-subtle);
+	background: var(--color-bg-tertiary);
+}
+
+.file-browser-title {
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--color-text-secondary);
+	margin: 0;
+}
+
+/* File Browser Search */
+.file-browser-search {
+	position: relative;
+	padding: var(--space-3);
+	border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.file-browser-search .search-icon {
+	position: absolute;
+	left: calc(var(--space-3) + var(--space-2));
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--color-text-tertiary);
+	pointer-events: none;
+}
+
+.file-browser-search-input {
+	width: 100%;
+	padding: var(--space-2) var(--space-2) var(--space-2) calc(var(--space-2) + 24px);
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--radius-md);
+	font-size: var(--font-size-sm);
+	color: var(--color-text-primary);
+	font-family: var(--font-sans);
+	transition: all var(--transition-fast);
+}
+
+.file-browser-search-input:focus {
+	outline: none;
+	border-color: var(--color-primary);
+	background: var(--color-bg-primary);
+}
+
+.file-browser-search-input::placeholder {
+	color: var(--color-text-tertiary);
+}
+
+/* File Browser Tree */
+.file-browser-tree {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--space-2) 0;
+}
+
+.file-browser-empty {
+	padding: var(--space-8) var(--space-4);
+	text-align: center;
+	color: var(--color-text-tertiary);
+	font-size: var(--font-size-sm);
+}
+
+/* File Browser Folder */
+.file-browser-folder {
+	margin-bottom: var(--space-1);
+}
+
+.file-browser-folder-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	cursor: pointer;
+	transition: background var(--transition-fast);
+	user-select: none;
+}
+
+.file-browser-folder-header:hover {
+	background: var(--color-bg-tertiary);
+}
+
+.file-browser-folder-icon {
+	flex-shrink: 0;
+	color: var(--color-text-secondary);
+	transition: transform var(--transition-fast);
+}
+
+.file-browser-folder.collapsed .file-browser-folder-icon {
+	transform: rotate(-90deg);
+}
+
+.file-browser-folder-name {
+	flex: 1;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--color-text-secondary);
+}
+
+.file-browser-folder-content {
+	padding-left: var(--space-4);
+}
+
+.file-browser-folder.collapsed .file-browser-folder-content {
+	display: none;
+}
+
+/* File Browser Item */
+.file-browser-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+	border-left: 2px solid transparent;
+}
+
+.file-browser-item:hover {
+	background: var(--color-bg-tertiary);
+}
+
+.file-browser-item.active {
+	background: var(--color-bg-elevated);
+	border-left-color: var(--color-primary);
+}
+
+.file-browser-item-icon {
+	flex-shrink: 0;
+	color: var(--color-text-tertiary);
+}
+
+.file-browser-item-content {
+	flex: 1;
+	min-width: 0;
+}
+
+.file-browser-item-name {
+	font-size: var(--font-size-sm);
+	color: var(--color-text-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.file-browser-item-meta {
+	font-size: var(--font-size-xs);
+	color: var(--color-text-tertiary);
+	margin-top: var(--space-1);
+}
+
+/* Document Editor Area */
+.docs-content {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 /* Document Header */
@@ -244,6 +423,20 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
+	.docs-main {
+		grid-template-columns: 1fr;
+	}
+
+	.file-browser {
+		position: fixed;
+		left: 0;
+		top: 64px;
+		bottom: 0;
+		width: 280px;
+		z-index: 100;
+		box-shadow: var(--shadow-xl);
+	}
+
 	.docs-container {
 		grid-template-columns: 1fr;
 		grid-template-rows: 1fr 1fr;
@@ -252,5 +445,15 @@
 	.editor-pane {
 		border-right: none;
 		border-bottom: 1px solid var(--color-border-subtle);
+	}
+}
+
+@media (max-width: 768px) {
+	.file-browser {
+		width: 100%;
+	}
+
+	.docs-container {
+		grid-template-rows: 60vh 40vh;
 	}
 }

@@ -50,41 +50,77 @@
 
 	<!-- Main Content -->
 	<main class="main docs-main">
-		<!-- Document Header -->
-		<div class="docs-header">
-			<input
-				type="text"
-				id="docTitle"
-				class="doc-title-input"
-				placeholder="Untitled Document"
-				value=""
-			>
-			<div class="docs-meta">
-				<span class="docs-meta-item" id="docPath"></span>
-				<span class="docs-meta-item" id="docUpdated"></span>
+		<!-- File Browser Sidebar -->
+		<aside class="file-browser" id="fileBrowser">
+			<div class="file-browser-header">
+				<h3 class="file-browser-title">Documents</h3>
+				<button class="btn-icon" id="toggleSidebarBtn" aria-label="Toggle sidebar">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+						<line x1="9" y1="3" x2="9" y2="21"></line>
+					</svg>
+				</button>
 			</div>
-		</div>
 
-		<!-- Editor Container -->
-		<div class="docs-container">
-			<!-- Editor Pane -->
-			<div class="editor-pane">
-				<div class="pane-header">
-					<h3 class="pane-title">Editor</h3>
-					<div class="pane-actions">
-						<button class="btn-icon" id="formatBtn" aria-label="Format markdown">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M4 7V4h16v3"></path>
-								<path d="M9 20h6"></path>
-								<path d="M12 4v16"></path>
-							</svg>
-						</button>
-					</div>
+			<!-- File Browser Search -->
+			<div class="file-browser-search">
+				<svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="11" cy="11" r="8"></circle>
+					<path d="m21 21-4.35-4.35"></path>
+				</svg>
+				<input
+					type="text"
+					id="fileBrowserSearch"
+					class="file-browser-search-input"
+					placeholder="Search documents..."
+				>
+			</div>
+
+			<!-- File Browser Tree -->
+			<div class="file-browser-tree" id="fileBrowserTree">
+				<div class="file-browser-empty">
+					<p>No documents yet</p>
 				</div>
-				<textarea
-					id="markdownEditor"
-					class="markdown-editor"
-					placeholder="Start typing markdown here...
+			</div>
+		</aside>
+
+		<!-- Document Editor Area -->
+		<div class="docs-content">
+			<!-- Document Header -->
+			<div class="docs-header">
+				<input
+					type="text"
+					id="docTitle"
+					class="doc-title-input"
+					placeholder="Untitled Document"
+					value=""
+				>
+				<div class="docs-meta">
+					<span class="docs-meta-item" id="docPath"></span>
+					<span class="docs-meta-item" id="docUpdated"></span>
+				</div>
+			</div>
+
+			<!-- Editor Container -->
+			<div class="docs-container">
+				<!-- Editor Pane -->
+				<div class="editor-pane">
+					<div class="pane-header">
+						<h3 class="pane-title">Editor</h3>
+						<div class="pane-actions">
+							<button class="btn-icon" id="formatBtn" aria-label="Format markdown">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M4 7V4h16v3"></path>
+									<path d="M9 20h6"></path>
+									<path d="M12 4v16"></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+					<textarea
+						id="markdownEditor"
+						class="markdown-editor"
+						placeholder="Start typing markdown here...
 
 # Heading 1
 ## Heading 2
@@ -100,16 +136,17 @@
 Code block
 ```
 "
-				></textarea>
-			</div>
-
-			<!-- Preview Pane -->
-			<div class="preview-pane">
-				<div class="pane-header">
-					<h3 class="pane-title">Preview</h3>
+					></textarea>
 				</div>
-				<div id="markdownPreview" class="markdown-preview">
-					<p class="preview-placeholder">Preview will appear here...</p>
+
+				<!-- Preview Pane -->
+				<div class="preview-pane">
+					<div class="pane-header">
+						<h3 class="pane-title">Preview</h3>
+					</div>
+					<div id="markdownPreview" class="markdown-preview">
+						<p class="preview-placeholder">Preview will appear here...</p>
+					</div>
 				</div>
 			</div>
 		</div>
