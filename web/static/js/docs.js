@@ -184,6 +184,9 @@ class MarkdownEditor {
 
 		// Update URL
 		window.history.pushState({}, '', '/static/docs.html');
+
+		// Refresh file browser to clear active state
+		this.renderFileBrowser();
 	}
 
 	updatePreview() {
@@ -194,12 +197,78 @@ class MarkdownEditor {
 		}
 
 		try {
-			const html = marked.parse(markdown);
+			// Process wiki-style links before markdown parsing
+			const processedMarkdown = this.processWikiLinks(markdown);
+			const html = marked.parse(processedMarkdown);
 			this.preview.innerHTML = html;
+
+			// Add click handlers for internal links
+			this.attachInternalLinkHandlers();
 		} catch (error) {
 			console.error('Markdown parse error:', error);
 			this.preview.innerHTML = '<p class="preview-placeholder">Error parsing markdown</p>';
 		}
+	}
+
+	processWikiLinks(markdown) {
+		// Replace [[Document Title]] with markdown links
+		// Pattern: [[title]] or [[title|display text]]
+		return markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, target, displayText) => {
+			const display = displayText || target;
+			const doc = this.findDocumentByTitle(target.trim());
+
+			if (doc) {
+				// Found document - create internal link
+				return `[${display}](#doc:${doc.id} "${doc.title}")`;
+			} else {
+				// Document not found - create placeholder link
+				return `[${display}](#doc:not-found:${encodeURIComponent(target.trim())} "${target} (not found)")`;
+			}
+		});
+	}
+
+	findDocumentByTitle(title) {
+		const titleLower = title.toLowerCase();
+		return this.documents.find(doc =>
+			(doc.title || '').toLowerCase() === titleLower ||
+			(doc.path || '').toLowerCase().includes(titleLower)
+		);
+	}
+
+	attachInternalLinkHandlers() {
+		const links = this.preview.querySelectorAll('a[href^="#doc:"]');
+		links.forEach(link => {
+			link.addEventListener('click', async (e) => {
+				e.preventDefault();
+				const href = link.getAttribute('href');
+
+				// Extract document ID from href
+				const match = href.match(/#doc:([^:]+)(?::(.+))?/);
+				if (match) {
+					const docId = match[1];
+
+					if (docId === 'not-found') {
+						const targetTitle = decodeURIComponent(match[2] || '');
+						alert(`Document "${targetTitle}" not found. Create it first.`);
+						return;
+					}
+
+					// Load the linked document
+					await this.loadDocument(docId);
+					window.history.pushState({}, '', `/static/docs.html?id=${docId}`);
+					this.renderFileBrowser();
+				}
+			});
+
+			// Style internal links differently
+			link.classList.add('internal-link');
+		});
+
+		// Style broken links
+		const brokenLinks = this.preview.querySelectorAll('a[href^="#doc:not-found"]');
+		brokenLinks.forEach(link => {
+			link.classList.add('broken-link');
+		});
 	}
 
 	markDirty() {
@@ -228,11 +297,15 @@ class MarkdownEditor {
 		const content = this.editor.value;
 
 		try {
+			// Extract links from content
+			const linksTo = this.extractLinks(content);
+
 			if (this.currentDoc.id) {
 				// Update existing document
 				this.currentDoc.title = title;
 				this.currentDoc.content = content;
 				this.currentDoc.path = `/${this.slugify(title)}.md`;
+				this.currentDoc.links_to = linksTo;
 
 				await API.updateDocument(this.currentDoc.id, this.currentDoc);
 
@@ -246,6 +319,7 @@ class MarkdownEditor {
 				this.currentDoc.title = title;
 				this.currentDoc.content = content;
 				this.currentDoc.path = `/${this.slugify(title)}.md`;
+				this.currentDoc.links_to = linksTo;
 
 				const created = await API.createDocument(this.currentDoc);
 				this.currentDoc = created;
@@ -267,6 +341,22 @@ class MarkdownEditor {
 			console.error('Failed to save document:', error);
 			alert('Failed to save document');
 		}
+	}
+
+	extractLinks(content) {
+		const links = [];
+		const wikiLinkPattern = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
+		let match;
+
+		while ((match = wikiLinkPattern.exec(content)) !== null) {
+			const targetTitle = match[1].trim();
+			const doc = this.findDocumentByTitle(targetTitle);
+			if (doc && !links.includes(doc.id)) {
+				links.push(doc.id);
+			}
+		}
+
+		return links;
 	}
 
 	updateMeta() {
