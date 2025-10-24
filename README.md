@@ -14,6 +14,13 @@ go run cmd/cartographer/main.go
 # Health check: http://localhost:8080/health
 ```
 
+**Available Pages:**
+- **Home**: http://localhost:8080 - Projects overview
+- **Board**: http://localhost:8080/static/board.html - Interactive kanban board with drag-and-drop
+- **Docs**: http://localhost:8080/static/docs.html - Markdown documentation hub
+- **Beads**: http://localhost:8080/static/beads.html - Beads issue visualization
+- **Graph**: http://localhost:8080/static/graph.html - Dependency graph with multiple layouts
+
 ## Architecture
 
 - **Backend**: Go 1.21+ with clean architecture
@@ -45,33 +52,61 @@ cartographer/
 └── scripts/                # Utility scripts
 ```
 
-## Features (Planned)
+## Current Features
 
-### Phase 1: Foundation (Current)
-- [x] Basic Go project structure
-- [x] HTTP server with health check
-- [ ] SQLite database setup
-- [ ] Basic HTML UI
-- [ ] Domain models (Project, Task, Board)
-- [ ] REST API endpoints
-- [ ] Beads integration
-- [ ] WebSocket real-time updates
-- [ ] Claude Code slash command
+### ✅ Phase 1: Foundation (Complete)
+- [x] Go project structure with clean architecture
+- [x] HTTP server with health check endpoint
+- [x] SQLite database with WAL mode
+- [x] Terminal-aesthetic HTML/CSS/JS UI
+- [x] Domain models (Project, Task, Board, Document)
+- [x] REST API endpoints (GET/POST/PUT/DELETE)
+- [x] Beads framework integration and parser
+- [x] WebSocket real-time updates
+- [x] Claude Code `/cartographer` slash command
 
-### Phase 2: Enhanced Features
-- Kanban boards with drag-and-drop
-- Markdown documentation hub
-- Basic graph view
-- Beads visualization
+### ✅ Phase 2: Enhanced Features (Complete)
 
-### Phase 3: Intelligence & Visualization
+**Kanban Boards:**
+- [x] HTML5 drag-and-drop for tasks
+- [x] Card details panel with full task information
+- [x] Filters (status, priority, labels) and search
+- [x] Multiple boards per project
+- [x] Priority indicators and status badges
+- [x] Task estimates and metadata
+
+**Markdown Documentation:**
+- [x] Live preview markdown editor
+- [x] File browser for document navigation
+- [x] Internal wiki-style linking `[[page]]`
+- [x] Full-text search across documents
+- [x] Syntax highlighting for code blocks
+
+**Beads Visualization:**
+- [x] Enhanced parser for advanced Beads features
+- [x] Interactive issue browser with statistics
+- [x] Task linking from Beads issues
+- [x] Filters by status, type, priority
+- [x] Search across all issues
+
+**Dependency Graph:**
+- [x] Interactive graph visualization
+- [x] Hierarchical layout (dependency-based)
+- [x] Circular layout
+- [x] Force-directed layout (physics simulation)
+- [x] Click-to-focus with zoom and pan
+- [x] Connection highlighting
+- [x] Filter controls (show closed, show orphans)
+- [x] Node details panel
+
+### 🚧 Phase 3: Intelligence & Visualization (Planned)
 - Mermaid diagram integration
 - Advanced graph analytics
 - AI-assisted features
 - Timeline and milestones
 
-### Phase 4: Polish & Integration
-- Animations and transitions
+### 📋 Phase 4: Polish & Integration (Planned)
+- Enhanced animations and transitions
 - Git integration
 - Analytics dashboard
 - Performance optimization
@@ -91,6 +126,34 @@ go build -o cartographer cmd/cartographer/main.go
 # Run binary
 ./cartographer
 ```
+
+## API Endpoints
+
+Cartographer provides a comprehensive REST API:
+
+**Projects & Boards:**
+- `GET/POST /api/projects` - List or create projects
+- `GET/PUT/DELETE /api/projects/:id` - Project operations
+- `GET/POST /api/boards` - List or create boards
+- `GET/PUT/DELETE /api/boards/:id` - Board operations
+
+**Tasks:**
+- `GET/POST /api/tasks` - List or create tasks
+- `GET/PUT/DELETE /api/tasks/:id` - Task operations
+
+**Documents:**
+- `GET/POST /api/documents` - List or create documents
+- `GET/PUT/DELETE /api/documents/:id` - Document operations
+- `GET /api/documents/search?q=:query` - Search documents
+
+**Beads:**
+- `GET /api/beads/issues` - List all beads issues
+- `GET /api/beads/issues/:id` - Get single issue
+- `GET /api/beads/graph` - Get dependency graph
+- `GET /api/beads/stats` - Get statistics
+
+**WebSocket:**
+- `GET /ws` - Real-time updates (projects, boards, tasks)
 
 ## Claude Code Integration
 
@@ -123,6 +186,10 @@ MIT
 
 ## Status
 
-🚧 **In Development** - Phase 1: Foundation (Week 1-2)
+✅ **Phase 1 Complete** - Foundation with full MVP functionality
+✅ **Phase 2 Complete** - Enhanced features with kanban, docs, beads, and graph visualization
+🚧 **Phase 3 Next** - Intelligence & advanced visualization features
+
+**26 tasks completed** across Phase 1 and Phase 2.
 
 Built with ❤️ for seamless human-AI collaboration.
