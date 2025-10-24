@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dependency Graph - Cartographer</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/graph.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <div class="nav-brand">
+                <span class="brand-icon">◆</span>
+                <span class="brand-text">Cartographer</span>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Projects</a>
+                <a href="/static/docs.html" class="nav-link">Docs</a>
+                <a href="/static/beads.html" class="nav-link">Beads</a>
+                <a href="/static/graph.html" class="nav-link active">Graph</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="graph-main">
+        <!-- Header -->
+        <header class="graph-header">
+            <div class="graph-header-content">
+                <h1 class="graph-title">Dependency Graph</h1>
+                <p class="graph-subtitle">Visualize issue dependencies and relationships</p>
+            </div>
+            <div class="graph-controls">
+                <div class="control-group">
+                    <label class="control-label">
+                        <input type="checkbox" id="showClosed" class="control-checkbox">
+                        Show Closed Issues
+                    </label>
+                    <label class="control-label">
+                        <input type="checkbox" id="showOrphans" class="control-checkbox" checked>
+                        Show Orphans
+                    </label>
+                </div>
+                <div class="control-group">
+                    <select id="layoutType" class="control-select">
+                        <option value="hierarchical">Hierarchical Layout</option>
+                        <option value="circular">Circular Layout</option>
+                        <option value="force" disabled>Force-Directed (Coming Soon)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button class="btn btn-secondary" id="resetZoom">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                            <path d="M3 3v5h5"></path>
+                        </svg>
+                        Reset View
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Graph Container -->
+        <div class="graph-container">
+            <div class="graph-canvas" id="graphCanvas">
+                <svg id="graphSvg" width="100%" height="100%">
+                    <defs>
+                        <!-- Arrow marker for dependencies -->
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#64748b" />
+                        </marker>
+                        <!-- Arrow marker for blocks -->
+                        <marker id="arrowhead-blocks" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#dc2626" />
+                        </marker>
+                        <!-- Arrow marker for related -->
+                        <marker id="arrowhead-related" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#8b5cf6" />
+                        </marker>
+                    </defs>
+                    <g id="graphContent">
+                        <!-- Edges will be rendered here -->
+                        <g id="edges"></g>
+                        <!-- Nodes will be rendered here -->
+                        <g id="nodes"></g>
+                    </g>
+                </svg>
+                <div class="graph-loading" id="graphLoading">
+                    <div class="spinner"></div>
+                    <p>Loading dependency graph...</p>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="graph-legend">
+                <h3 class="legend-title">Legend</h3>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-node status-open"></div>
+                        <span>Open</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-node status-in_progress"></div>
+                        <span>In Progress</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-node status-closed"></div>
+                        <span>Closed</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="40" height="2">
+                            <line x1="0" y1="1" x2="40" y2="1" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)" />
+                        </svg>
+                        <span>Depends On</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="40" height="2">
+                            <line x1="0" y1="1" x2="40" y2="1" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowhead-blocks)" />
+                        </svg>
+                        <span>Blocks</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="40" height="2">
+                            <line x1="0" y1="1" x2="40" y2="1" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="2,2" />
+                        </svg>
+                        <span>Related</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node Details Panel -->
+        <div class="node-details" id="nodeDetails">
+            <div class="node-details-header">
+                <h3 class="node-details-title" id="nodeDetailsTitle">Select a node</h3>
+                <button class="btn-icon" id="closeDetails" aria-label="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6 6 18M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="node-details-body" id="nodeDetailsBody">
+                <p class="node-details-placeholder">Click on a node to see details</p>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="/static/js/graph.js"></script>
+</body>
+</html>
