@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Docs - Cartographer</title>
+	<link rel="stylesheet" href="/static/css/main.css">
+	<link rel="stylesheet" href="/static/css/docs.css">
+	<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+</head>
+<body>
+	<!-- Header -->
+	<header class="header">
+		<div class="container header-content">
+			<a href="/" class="logo">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+					<polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+					<line x1="12" y1="22.08" x2="12" y2="12"></line>
+				</svg>
+				<h1>Cartographer</h1>
+			</a>
+
+			<nav class="nav" role="navigation" aria-label="Main navigation">
+				<a href="/" class="nav-link">Home</a>
+				<a href="/static/board.html" class="nav-link">Boards</a>
+				<a href="/static/docs.html" class="nav-link" aria-current="page">Docs</a>
+				<a href="#" class="nav-link">Graph</a>
+			</nav>
+
+			<div class="header-actions">
+				<button class="btn btn-secondary btn-sm" id="saveBtn" disabled>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+						<polyline points="17 21 17 13 7 13 7 21"></polyline>
+						<polyline points="7 3 7 8 15 8"></polyline>
+					</svg>
+					Save
+				</button>
+				<button class="btn btn-primary btn-sm" id="newDocBtn">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="12" y1="5" x2="12" y2="19"></line>
+						<line x1="5" y1="12" x2="19" y2="12"></line>
+					</svg>
+					New
+				</button>
+			</div>
+		</div>
+	</header>
+
+	<!-- Main Content -->
+	<main class="main docs-main">
+		<!-- Document Header -->
+		<div class="docs-header">
+			<input
+				type="text"
+				id="docTitle"
+				class="doc-title-input"
+				placeholder="Untitled Document"
+				value=""
+			>
+			<div class="docs-meta">
+				<span class="docs-meta-item" id="docPath"></span>
+				<span class="docs-meta-item" id="docUpdated"></span>
+			</div>
+		</div>
+
+		<!-- Editor Container -->
+		<div class="docs-container">
+			<!-- Editor Pane -->
+			<div class="editor-pane">
+				<div class="pane-header">
+					<h3 class="pane-title">Editor</h3>
+					<div class="pane-actions">
+						<button class="btn-icon" id="formatBtn" aria-label="Format markdown">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M4 7V4h16v3"></path>
+								<path d="M9 20h6"></path>
+								<path d="M12 4v16"></path>
+							</svg>
+						</button>
+					</div>
+				</div>
+				<textarea
+					id="markdownEditor"
+					class="markdown-editor"
+					placeholder="Start typing markdown here...
+
+# Heading 1
+## Heading 2
+
+**Bold text** and *italic text*
+
+- List item 1
+- List item 2
+
+[Link text](https://example.com)
+
+```
+Code block
+```
+"
+				></textarea>
+			</div>
+
+			<!-- Preview Pane -->
+			<div class="preview-pane">
+				<div class="pane-header">
+					<h3 class="pane-title">Preview</h3>
+				</div>
+				<div id="markdownPreview" class="markdown-preview">
+					<p class="preview-placeholder">Preview will appear here...</p>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<script src="/static/js/docs.js" type="module"></script>
+</body>
+</html>

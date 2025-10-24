@@ -13,11 +13,12 @@ import (
 
 // APIHandler handles REST API requests
 type APIHandler struct {
-	projects *storage.ProjectRepository
-	boards   *storage.BoardRepository
-	tasks    *storage.TaskRepository
-	wsHub    *websocket.Hub
-	logger   *log.Logger
+	projects  *storage.ProjectRepository
+	boards    *storage.BoardRepository
+	tasks     *storage.TaskRepository
+	documents *storage.DocumentRepository
+	wsHub     *websocket.Hub
+	logger    *log.Logger
 }
 
 // NewAPIHandler creates a new API handler
@@ -25,15 +26,17 @@ func NewAPIHandler(
 	projects *storage.ProjectRepository,
 	boards *storage.BoardRepository,
 	tasks *storage.TaskRepository,
+	documents *storage.DocumentRepository,
 	wsHub *websocket.Hub,
 	logger *log.Logger,
 ) *APIHandler {
 	return &APIHandler{
-		projects: projects,
-		boards:   boards,
-		tasks:    tasks,
-		wsHub:    wsHub,
-		logger:   logger,
+		projects:  projects,
+		boards:    boards,
+		tasks:     tasks,
+		documents: documents,
+		wsHub:     wsHub,
+		logger:    logger,
 	}
 }
 
@@ -50,6 +53,10 @@ func (h *APIHandler) Register(mux *http.ServeMux) {
 	// Tasks
 	mux.HandleFunc("/api/tasks", h.handleTasks)
 	mux.HandleFunc("/api/tasks/", h.handleTask)
+
+	// Documents
+	mux.HandleFunc("/api/documents", h.handleDocuments)
+	mux.HandleFunc("/api/documents/", h.handleDocument)
 }
 
 // Projects handlers
@@ -404,6 +411,109 @@ func (h *APIHandler) deleteTask(w http.ResponseWriter, r *http.Request, id strin
 	// Broadcast task deletion via WebSocket
 	if h.wsHub != nil {
 		h.wsHub.BroadcastTaskDeleted(task.ID, task.BoardID)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Documents handlers
+
+func (h *APIHandler) handleDocuments(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		projectID := r.URL.Query().Get("project_id")
+		if projectID == "" {
+			http.Error(w, "project_id parameter required", http.StatusBadRequest)
+			return
+		}
+		h.listDocuments(w, r, projectID)
+	case http.MethodPost:
+		h.createDocument(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *APIHandler) handleDocument(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/documents/")
+	if id == "" {
+		http.Error(w, "Document ID required", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getDocument(w, r, id)
+	case http.MethodPut:
+		h.updateDocument(w, r, id)
+	case http.MethodDelete:
+		h.deleteDocument(w, r, id)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *APIHandler) listDocuments(w http.ResponseWriter, r *http.Request, projectID string) {
+	documents, err := h.documents.ListByProject(projectID)
+	if err != nil {
+		h.logger.Printf("Error listing documents: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	h.respondJSON(w, documents)
+}
+
+func (h *APIHandler) getDocument(w http.ResponseWriter, r *http.Request, id string) {
+	document, err := h.documents.GetByID(id)
+	if err != nil {
+		h.logger.Printf("Error getting document: %v", err)
+		http.Error(w, "Document not found", http.StatusNotFound)
+		return
+	}
+
+	h.respondJSON(w, document)
+}
+
+func (h *APIHandler) createDocument(w http.ResponseWriter, r *http.Request) {
+	var document domain.Document
+	if err := json.NewDecoder(r.Body).Decode(&document); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.documents.Create(&document); err != nil {
+		h.logger.Printf("Error creating document: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	h.respondJSON(w, document)
+}
+
+func (h *APIHandler) updateDocument(w http.ResponseWriter, r *http.Request, id string) {
+	var document domain.Document
+	if err := json.NewDecoder(r.Body).Decode(&document); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	document.ID = id
+	if err := h.documents.Update(&document); err != nil {
+		h.logger.Printf("Error updating document: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	h.respondJSON(w, document)
+}
+
+func (h *APIHandler) deleteDocument(w http.ResponseWriter, r *http.Request, id string) {
+	if err := h.documents.Delete(id); err != nil {
+		h.logger.Printf("Error deleting document: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)

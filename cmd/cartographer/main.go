@@ -57,6 +57,7 @@ func main() {
 	projectRepo := storage.NewProjectRepository(db)
 	boardRepo := storage.NewBoardRepository(db)
 	taskRepo := storage.NewTaskRepository(db)
+	documentRepo := storage.NewDocumentRepository(db)
 
 	// Initialize WebSocket hub
 	logger.Println("Starting WebSocket hub...")
@@ -81,7 +82,7 @@ func main() {
 	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
 	// REST API endpoints
-	apiHandler := rest.NewAPIHandler(projectRepo, boardRepo, taskRepo, wsHub, logger)
+	apiHandler := rest.NewAPIHandler(projectRepo, boardRepo, taskRepo, documentRepo, wsHub, logger)
 	apiHandler.Register(mux)
 
 	// Static files - serve from web/static
