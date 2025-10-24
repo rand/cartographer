@@ -164,6 +164,12 @@ class KanbanBoard {
 		this.draggedCard = null;
 		this.draggedTask = null;
 
+		// Filter state
+		this.filters = {
+			search: '',
+			priorities: new Set()
+		};
+
 		this.wsManager = new WebSocketManager();
 		this.setupWebSocket();
 	}
@@ -220,6 +226,36 @@ class KanbanBoard {
 		}
 	}
 
+	updateClearFiltersButton() {
+		const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+		const hasActiveFilters = this.filters.priorities.size > 0;
+		clearFiltersBtn.style.display = hasActiveFilters ? 'flex' : 'none';
+	}
+
+	getFilteredTasks() {
+		return this.tasks.filter(task => {
+			// Search filter
+			if (this.filters.search) {
+				const searchLower = this.filters.search;
+				const titleMatch = (task.title || '').toLowerCase().includes(searchLower);
+				const descMatch = (task.description || '').toLowerCase().includes(searchLower);
+				if (!titleMatch && !descMatch) {
+					return false;
+				}
+			}
+
+			// Priority filter
+			if (this.filters.priorities.size > 0) {
+				const taskPriority = task.priority || 'medium';
+				if (!this.filters.priorities.has(taskPriority)) {
+					return false;
+				}
+			}
+
+			return true;
+		});
+	}
+
 	render() {
 		const boardEl = document.getElementById('kanbanBoard');
 		const emptyState = document.getElementById('emptyState');
@@ -238,7 +274,8 @@ class KanbanBoard {
 	}
 
 	renderColumn(column) {
-		const tasks = this.tasks.filter(t => t.status === column.id);
+		const filteredTasks = this.getFilteredTasks();
+		const tasks = filteredTasks.filter(t => t.status === column.id);
 
 		return `
 			<div class="kanban-column" data-column-id="${column.id}">
@@ -407,6 +444,53 @@ class KanbanBoard {
 	}
 
 	setupEventListeners() {
+		// Search input
+		const searchInput = document.getElementById('searchInput');
+		const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+		searchInput.addEventListener('input', (e) => {
+			this.filters.search = e.target.value.toLowerCase();
+			clearSearchBtn.style.display = this.filters.search ? 'flex' : 'none';
+			this.render();
+		});
+
+		clearSearchBtn.addEventListener('click', () => {
+			searchInput.value = '';
+			this.filters.search = '';
+			clearSearchBtn.style.display = 'none';
+			this.render();
+		});
+
+		// Priority filter buttons
+		document.querySelectorAll('.filter-btn[data-filter="priority"]').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				const value = e.currentTarget.dataset.value;
+				const btn = e.currentTarget;
+
+				if (this.filters.priorities.has(value)) {
+					this.filters.priorities.delete(value);
+					btn.classList.remove('active');
+				} else {
+					this.filters.priorities.add(value);
+					btn.classList.add('active');
+				}
+
+				this.updateClearFiltersButton();
+				this.render();
+			});
+		});
+
+		// Clear filters button
+		const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+		clearFiltersBtn.addEventListener('click', () => {
+			this.filters.priorities.clear();
+			document.querySelectorAll('.filter-btn').forEach(btn => {
+				btn.classList.remove('active');
+			});
+			this.updateClearFiltersButton();
+			this.render();
+		});
+
 		// New task button
 		document.getElementById('newTaskBtn').addEventListener('click', () => {
 			this.showCreateTaskModal();
