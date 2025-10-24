@@ -470,11 +470,100 @@ class DependencyGraph {
         const nodeEl = this.nodesGroup.querySelector(`[data-node-id="${nodeId}"]`);
         if (nodeEl) nodeEl.classList.add('selected');
 
-        // Show details
+        // Find the node
         const node = this.nodes.find(n => n.id === nodeId);
         if (node) {
+            // Center and zoom on the node
+            this.focusOnNode(node);
+
+            // Highlight connected edges and nodes
+            this.highlightConnections(nodeId);
+
+            // Show details
             this.showDetails(node.issue);
         }
+    }
+
+    focusOnNode(node) {
+        const svgRect = this.svg.getBoundingClientRect();
+        const centerX = svgRect.width / 2;
+        const centerY = svgRect.height / 2;
+
+        // Calculate transform to center the node
+        const targetX = centerX - node.x * 1.5;
+        const targetY = centerY - node.y * 1.5;
+
+        // Animate transform
+        this.animateTransform(
+            this.currentTransform.x,
+            this.currentTransform.y,
+            this.currentTransform.scale,
+            targetX,
+            targetY,
+            1.5,
+            300
+        );
+    }
+
+    highlightConnections(nodeId) {
+        // Remove previous highlights
+        this.edgesGroup.querySelectorAll('.highlighted').forEach(el => {
+            el.classList.remove('highlighted');
+        });
+        this.nodesGroup.querySelectorAll('.connected').forEach(el => {
+            el.classList.remove('connected');
+        });
+
+        // Find connected node IDs
+        const connectedIds = new Set();
+        this.edges.forEach(edge => {
+            if (edge.from === nodeId) {
+                connectedIds.add(edge.to);
+                // Highlight edge
+                const edgeEl = this.edgesGroup.querySelector(
+                    `[data-from="${edge.from}"][data-to="${edge.to}"]`
+                );
+                if (edgeEl) edgeEl.classList.add('highlighted');
+            } else if (edge.to === nodeId) {
+                connectedIds.add(edge.from);
+                // Highlight edge
+                const edgeEl = this.edgesGroup.querySelector(
+                    `[data-from="${edge.from}"][data-to="${edge.to}"]`
+                );
+                if (edgeEl) edgeEl.classList.add('highlighted');
+            }
+        });
+
+        // Highlight connected nodes
+        connectedIds.forEach(id => {
+            const nodeEl = this.nodesGroup.querySelector(`[data-node-id="${id}"]`);
+            if (nodeEl) nodeEl.classList.add('connected');
+        });
+    }
+
+    animateTransform(fromX, fromY, fromScale, toX, toY, toScale, duration) {
+        const startTime = performance.now();
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function (ease-out)
+            const eased = 1 - Math.pow(1 - progress, 3);
+
+            // Interpolate values
+            this.currentTransform.x = fromX + (toX - fromX) * eased;
+            this.currentTransform.y = fromY + (toY - fromY) * eased;
+            this.currentTransform.scale = fromScale + (toScale - fromScale) * eased;
+
+            this.applyTransform(this.currentTransform);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        requestAnimationFrame(animate);
     }
 
     showDetails(issue) {
@@ -560,6 +649,14 @@ class DependencyGraph {
             if (nodeEl) nodeEl.classList.remove('selected');
             this.selectedNode = null;
         }
+
+        // Clear all highlights
+        this.edgesGroup.querySelectorAll('.highlighted').forEach(el => {
+            el.classList.remove('highlighted');
+        });
+        this.nodesGroup.querySelectorAll('.connected').forEach(el => {
+            el.classList.remove('connected');
+        });
     }
 
     setupPanZoom() {

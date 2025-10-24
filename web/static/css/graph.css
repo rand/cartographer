@@ -139,6 +139,17 @@
     stroke-width: 4;
 }
 
+.graph-node.connected .node-circle {
+    stroke: #f59e0b;
+    stroke-width: 3;
+    filter: brightness(1.2);
+}
+
+.graph-node.connected .node-label {
+    font-weight: 600;
+    fill: var(--color-primary);
+}
+
 .node-circle {
     stroke: var(--color-border-default);
     stroke-width: 2;
@@ -205,8 +216,23 @@
 }
 
 .graph-edge.highlighted {
-    stroke-width: 3;
-    filter: brightness(1.3);
+    stroke-width: 4 !important;
+    filter: brightness(1.5);
+    opacity: 1;
+}
+
+/* Dim non-highlighted elements when a node is selected */
+.graph-node.selected ~ .graph-node:not(.selected):not(.connected) {
+    opacity: 0.3;
+}
+
+.graph-edge:not(.highlighted) {
+    opacity: 0.6;
+}
+
+.graph-node.selected ~ .graph-edge.highlighted,
+.graph-edge.highlighted {
+    opacity: 1;
 }
 
 /* Legend */
