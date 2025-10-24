@@ -61,8 +61,12 @@ func main() {
 	// Health check endpoint
 	mux.HandleFunc("/health", app.handleHealth)
 
-	// Static files
-	mux.HandleFunc("/", handleIndex)
+	// Static files - serve from web/static
+	fs := http.FileServer(http.Dir("web/static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	// Main index page
+	mux.HandleFunc("/", app.handleIndex)
 
 	addr := fmt.Sprintf("%s:%s", defaultHost, port)
 	server := &http.Server{
@@ -123,75 +127,12 @@ func (app *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleIndex serves the main HTML page
-func handleIndex(w http.ResponseWriter, r *http.Request) {
-	// For now, serve a simple HTML page
-	// Later this will serve from web/static/index.html
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, `<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Cartographer - Project Planning & Visualization</title>
-	<style>
-		* {
-			margin: 0;
-			padding: 0;
-			box-sizing: border-box;
-		}
-		body {
-			font-family: system-ui, -apple-system, sans-serif;
-			background: #0a0a0a;
-			color: #e0e0e0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			min-height: 100vh;
-			padding: 2rem;
-		}
-		.container {
-			text-align: center;
-			max-width: 600px;
-		}
-		h1 {
-			font-size: 3rem;
-			margin-bottom: 1rem;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			-webkit-background-clip: text;
-			-webkit-text-fill-color: transparent;
-			background-clip: text;
-		}
-		p {
-			font-size: 1.125rem;
-			color: #a0a0a0;
-			line-height: 1.6;
-		}
-		.status {
-			margin-top: 2rem;
-			padding: 1rem;
-			background: #1a1a1a;
-			border: 1px solid #333;
-			border-radius: 8px;
-		}
-		.status-dot {
-			display: inline-block;
-			width: 8px;
-			height: 8px;
-			background: #10b981;
-			border-radius: 50%;
-			margin-right: 0.5rem;
-		}
-	</style>
-</head>
-<body>
-	<div class="container">
-		<h1>Cartographer</h1>
-		<p>Agent-Ready Planning & Visualization System</p>
-		<div class="status">
-			<span class="status-dot"></span>
-			<span>System Online</span>
-		</div>
-	</div>
-</body>
-</html>`)
+func (app *App) handleIndex(w http.ResponseWriter, r *http.Request) {
+	// Only serve index.html for root path
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	http.ServeFile(w, r, "web/static/index.html")
 }
