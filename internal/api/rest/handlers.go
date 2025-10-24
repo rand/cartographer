@@ -7,18 +7,20 @@ import (
 	"strings"
 
 	"github.com/rand/cartographer/internal/api/websocket"
+	"github.com/rand/cartographer/internal/beads"
 	"github.com/rand/cartographer/internal/domain"
 	"github.com/rand/cartographer/internal/storage"
 )
 
 // APIHandler handles REST API requests
 type APIHandler struct {
-	projects  *storage.ProjectRepository
-	boards    *storage.BoardRepository
-	tasks     *storage.TaskRepository
-	documents *storage.DocumentRepository
-	wsHub     *websocket.Hub
-	logger    *log.Logger
+	projects     *storage.ProjectRepository
+	boards       *storage.BoardRepository
+	tasks        *storage.TaskRepository
+	documents    *storage.DocumentRepository
+	beadsParser  *beads.Parser
+	wsHub        *websocket.Hub
+	logger       *log.Logger
 }
 
 // NewAPIHandler creates a new API handler
@@ -27,16 +29,18 @@ func NewAPIHandler(
 	boards *storage.BoardRepository,
 	tasks *storage.TaskRepository,
 	documents *storage.DocumentRepository,
+	beadsParser *beads.Parser,
 	wsHub *websocket.Hub,
 	logger *log.Logger,
 ) *APIHandler {
 	return &APIHandler{
-		projects:  projects,
-		boards:    boards,
-		tasks:     tasks,
-		documents: documents,
-		wsHub:     wsHub,
-		logger:    logger,
+		projects:    projects,
+		boards:      boards,
+		tasks:       tasks,
+		documents:   documents,
+		beadsParser: beadsParser,
+		wsHub:       wsHub,
+		logger:      logger,
 	}
 }
 
@@ -57,6 +61,12 @@ func (h *APIHandler) Register(mux *http.ServeMux) {
 	// Documents
 	mux.HandleFunc("/api/documents", h.handleDocuments)
 	mux.HandleFunc("/api/documents/", h.handleDocument)
+
+	// Beads
+	mux.HandleFunc("/api/beads/issues", h.handleBeadsIssues)
+	mux.HandleFunc("/api/beads/issues/", h.handleBeadsIssue)
+	mux.HandleFunc("/api/beads/graph", h.handleBeadsGraph)
+	mux.HandleFunc("/api/beads/stats", h.handleBeadsStats)
 }
 
 // Projects handlers
@@ -517,6 +527,94 @@ func (h *APIHandler) deleteDocument(w http.ResponseWriter, r *http.Request, id s
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Beads handlers
+
+func (h *APIHandler) handleBeadsIssues(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	issues, err := h.beadsParser.ReadBeadsFromProject()
+	if err != nil {
+		h.logger.Printf("Error reading beads issues: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	h.respondJSON(w, issues)
+}
+
+func (h *APIHandler) handleBeadsIssue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/beads/issues/")
+	if id == "" {
+		http.Error(w, "Issue ID required", http.StatusBadRequest)
+		return
+	}
+
+	issues, err := h.beadsParser.ReadBeadsFromProject()
+	if err != nil {
+		h.logger.Printf("Error reading beads issues: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	analyzer := beads.NewAnalyzer(issues)
+	issue, found := analyzer.GetIssueByID(id)
+	if !found {
+		http.Error(w, "Issue not found", http.StatusNotFound)
+		return
+	}
+
+	h.respondJSON(w, issue)
+}
+
+func (h *APIHandler) handleBeadsGraph(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	issues, err := h.beadsParser.ReadBeadsFromProject()
+	if err != nil {
+		h.logger.Printf("Error reading beads issues: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	analyzer := beads.NewAnalyzer(issues)
+	graph, err := analyzer.BuildDependencyGraph()
+	if err != nil {
+		h.logger.Printf("Error building dependency graph: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	h.respondJSON(w, graph)
+}
+
+func (h *APIHandler) handleBeadsStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	issues, err := h.beadsParser.ReadBeadsFromProject()
+	if err != nil {
+		h.logger.Printf("Error reading beads issues: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	stats := beads.GetBeadsStatistics(issues)
+	h.respondJSON(w, stats)
 }
 
 // Helper methods

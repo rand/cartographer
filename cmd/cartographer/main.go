@@ -12,6 +12,7 @@ import (
 
 	"github.com/rand/cartographer/internal/api/rest"
 	"github.com/rand/cartographer/internal/api/websocket"
+	"github.com/rand/cartographer/internal/beads"
 	"github.com/rand/cartographer/internal/storage"
 )
 
@@ -59,6 +60,10 @@ func main() {
 	taskRepo := storage.NewTaskRepository(db)
 	documentRepo := storage.NewDocumentRepository(db)
 
+	// Initialize Beads parser
+	logger.Println("Initializing Beads parser...")
+	beadsParser := beads.NewParser(".")
+
 	// Initialize WebSocket hub
 	logger.Println("Starting WebSocket hub...")
 	wsHub := websocket.NewHub(logger)
@@ -82,7 +87,7 @@ func main() {
 	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
 	// REST API endpoints
-	apiHandler := rest.NewAPIHandler(projectRepo, boardRepo, taskRepo, documentRepo, wsHub, logger)
+	apiHandler := rest.NewAPIHandler(projectRepo, boardRepo, taskRepo, documentRepo, beadsParser, wsHub, logger)
 	apiHandler.Register(mux)
 
 	// Static files - serve from web/static
