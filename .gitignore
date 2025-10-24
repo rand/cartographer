@@ -1,5 +1,5 @@
-# Binaries
-cartographer
+# Binaries (only in root directory)
+/cartographer
 *.exe
 *.dll
 *.so
